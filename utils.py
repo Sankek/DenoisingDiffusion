@@ -41,3 +41,32 @@ def save_state(save_folder, name, model, optimizer, trained_iters, losses, losse
     
 def load_state(save_folder, name):
     return torch.load(os.path.join(save_folder, name, "state.pth"))
+
+
+def generate_images(model, variance_schedule, num=1, image_size=128, channels=3, device='cpu', reproducible=False, reproducible_seed=0):
+    model.eval()
+    shape = [num, channels, image_size, image_size]
+    if reproducible:
+        old_rng_state = torch.get_rng_state()
+        torch.manual_seed(reproducible_seed)
+    x_t = torch.normal(torch.zeros(shape), torch.ones(shape)).to(device)
+    Tmax = variance_schedule.Tmax
+    for t in range(Tmax-1, -1, -1):
+        with torch.no_grad():
+            pred_noise = model(x_t, torch.full((num,), t).to(device))
+            
+        alpha = variance_schedule.alpha[t]
+        variance = variance_schedule.variance[t]
+        alpha_prod_inv_sqrt = variance_schedule.alpha_prod_inv_sqrt[t]
+
+        if t>0:
+            z = torch.normal(torch.zeros(shape), torch.ones(shape)).to(device)
+        else:
+            z = 0
+        
+        x_t = 1/alpha**(1/2) * (x_t - variance/alpha_prod_inv_sqrt * pred_noise) + variance**(1/2) * z
+
+    if reproducible:
+        torch.set_rng_state(old_rng_state)
+        
+    return x_t.to('cpu')
