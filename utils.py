@@ -39,8 +39,8 @@ def save_state(save_folder, name, model, optimizer, trained_iters, losses, losse
     torch.save(state, os.path.join(state_save_folder, "state.pth"))
 
     
-def load_state(save_folder, name):
-    return torch.load(os.path.join(save_folder, name, "state.pth"))
+def load_state(save_folder, name, device=None):
+    return torch.load(os.path.join(save_folder, name, "state.pth"), map_location=device)
 
 
 def generate_images(model, variance_schedule, num=1, image_size=128, channels=3, device='cpu', reproducible=False, reproducible_seed=0):
